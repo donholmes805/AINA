@@ -21,14 +21,41 @@ const SavedArticleItem: React.FC<SavedArticleItemProps> = ({ article, onView, on
   </div>
 );
 
+const SavedArticleListSkeleton: React.FC = () => (
+  <div className="space-y-4">
+    {[...Array(3)].map((_, i) => (
+      <div key={i} className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 flex items-center justify-between gap-4 animate-pulse-fast">
+        <div className="flex items-center gap-4 w-full">
+            <div className="w-16 h-10 bg-gray-200 dark:bg-gray-700 rounded-md hidden sm:block"></div>
+            <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded-md w-2/3"></div>
+        </div>
+        <div className="flex-shrink-0 flex items-center gap-2">
+            <div className="w-9 h-9 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+            <div className="w-9 h-9 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
 
 interface SavedArticleListProps {
   articles: Article[];
+  isLoading: boolean;
   onViewArticle: (article: Article) => void;
   onDeleteArticle: (articleId: string) => void;
 }
 
-const SavedArticleList: React.FC<SavedArticleListProps> = ({ articles, onViewArticle, onDeleteArticle }) => {
+const SavedArticleList: React.FC<SavedArticleListProps> = ({ articles, isLoading, onViewArticle, onDeleteArticle }) => {
+  if (isLoading) {
+      return (
+        <div className="mt-12">
+            <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">My Saved Articles</h2>
+            <SavedArticleListSkeleton />
+        </div>
+      );
+  }
+
   if (articles.length === 0) {
     return null;
   }

@@ -1,5 +1,13 @@
+export enum SngineUserGroup {
+  Admin,
+  Anchor,
+}
 
-import { SngineUser, SngineUserGroup } from '../types';
+export interface SngineUser {
+  user_id: string;
+  user_name: string;
+  user_group: SngineUserGroup;
+}
 
 /**
  * In a real Sngine environment, you would get an auth token

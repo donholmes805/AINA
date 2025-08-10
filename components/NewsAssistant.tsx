@@ -1,14 +1,12 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import type { Article, User } from '../types';
-import { generateNewsArticle } from '../services/geminiService';
+import { generateNewsArticle, getSavedArticles, saveArticle, deleteArticle as apiDeleteArticle } from '../services/articleService';
 import SavedArticleList from './SavedArticleList';
 import { Spinner } from './common/Spinner';
 import { Icon } from './common/Icon';
 import ArticleSkeleton from './ArticleSkeleton';
 import GeneratedArticle from './GeneratedArticle';
 import ChangePasswordModal from './ChangePasswordModal';
-
-const ARTICLE_CACHE_KEY = 'aiNewsArticles';
 
 interface NewsAssistantProps {
   user: User;
@@ -20,21 +18,26 @@ const NewsAssistant: React.FC<NewsAssistantProps> = ({ user, onLogout }) => {
   const [activeArticle, setActiveArticle] = useState<Article | null>(null);
   const [savedArticles, setSavedArticles] = useState<Article[]>([]);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  const [isLoadingSaved, setIsLoadingSaved] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ message: string; icon: string } | null>(null);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const articleContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    try {
-      const cachedArticles = localStorage.getItem(ARTICLE_CACHE_KEY);
-      if (cachedArticles) {
-        setSavedArticles(JSON.parse(cachedArticles));
+    const loadArticles = async () => {
+      try {
+        setIsLoadingSaved(true);
+        const articles = await getSavedArticles();
+        setSavedArticles(articles);
+      } catch (e) {
+        console.error("Failed to load saved articles from API", e);
+        setError("Could not load your saved articles. Please try again later.");
+      } finally {
+        setIsLoadingSaved(false);
       }
-    } catch (e) {
-      console.error("Failed to parse saved articles from localStorage", e);
-      localStorage.removeItem(ARTICLE_CACHE_KEY);
-    }
+    };
+    loadArticles();
   }, []);
 
   useEffect(() => {
@@ -71,23 +74,29 @@ const NewsAssistant: React.FC<NewsAssistantProps> = ({ user, onLogout }) => {
     }
   }, [topic, isGenerating]);
 
-  const handleSaveArticle = useCallback((article: Article) => {
+  const handleSaveArticle = useCallback(async (article: Article) => {
     if (savedArticles.some(a => a.id === article.id)) return;
-    const updatedSavedArticles = [...savedArticles, article];
-    setSavedArticles(updatedSavedArticles);
-    localStorage.setItem(ARTICLE_CACHE_KEY, JSON.stringify(updatedSavedArticles));
-    showFeedback('Article saved!', 'save');
+    try {
+      await saveArticle(article);
+      setSavedArticles(prev => [...prev, article]);
+      showFeedback('Article saved!', 'save');
+    } catch (err) {
+      setError("Failed to save article. Please try again.");
+    }
   }, [savedArticles]);
 
-  const handleDeleteArticle = useCallback((articleId: string) => {
-    const updatedSavedArticles = savedArticles.filter(a => a.id !== articleId);
-    setSavedArticles(updatedSavedArticles);
-    localStorage.setItem(ARTICLE_CACHE_KEY, JSON.stringify(updatedSavedArticles));
-    if (activeArticle?.id === articleId) {
-      setActiveArticle(null);
+  const handleDeleteArticle = useCallback(async (articleId: string) => {
+    try {
+        await apiDeleteArticle(articleId);
+        setSavedArticles(prev => prev.filter(a => a.id !== articleId));
+        if (activeArticle?.id === articleId) {
+            setActiveArticle(null);
+        }
+        showFeedback('Article deleted.', 'delete');
+    } catch(err) {
+        setError("Failed to delete article. Please try again.");
     }
-    showFeedback('Article deleted.', 'delete');
-  }, [savedArticles, activeArticle]);
+  }, [activeArticle]);
   
   const handleCopyArticle = useCallback((article: Article) => {
     const textToCopy = `${article.title}\n\n${article.content}`;
@@ -176,7 +185,7 @@ const NewsAssistant: React.FC<NewsAssistantProps> = ({ user, onLogout }) => {
             {isGenerating && <ArticleSkeleton />}
             {error && (
               <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg" role="alert">
-                <strong className="font-bold">Generation Failed: </strong>
+                <strong className="font-bold">Error: </strong>
                 <span>{error}</span>
               </div>
             )}
@@ -210,6 +219,7 @@ const NewsAssistant: React.FC<NewsAssistantProps> = ({ user, onLogout }) => {
             articles={savedArticles}
             onViewArticle={setActiveArticle}
             onDeleteArticle={handleDeleteArticle}
+            isLoading={isLoadingSaved}
           />
         </main>
       </div>

@@ -1,21 +1,7 @@
-import { User, UserRole } from '../types';
-
-const PASSWORD_STORAGE_KEY = 'ai-news-assistant-admin-password';
-const ADMIN_USERNAME = 'admin';
-const DEFAULT_PASSWORD = 'admin';
-
-const getStoredPassword = (): string => {
-  try {
-    return localStorage.getItem(PASSWORD_STORAGE_KEY) || DEFAULT_PASSWORD;
-  } catch (error) {
-    console.warn("Could not access localStorage. Using default password.", error);
-    return DEFAULT_PASSWORD;
-  }
-};
+import { User } from '../types';
 
 /**
- * Simulates a real login by checking a username and password.
- * The password persistence is handled by localStorage for this frontend-only app.
+ * Calls the backend API to log in a user.
  * @param username The username to check.
  * @param password The password to check.
  * @returns A promise that resolves with a User object on success.
@@ -23,55 +9,41 @@ const getStoredPassword = (): string => {
 export const login = async (username: string, password: string): Promise<User> => {
   console.log(`Attempting login for user: ${username}`);
   
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      const storedPassword = getStoredPassword();
-
-      if (username.toLowerCase() === ADMIN_USERNAME && password === storedPassword) {
-        const user: User = {
-          id: 'user_admin_01',
-          name: 'Admin',
-          role: UserRole.Admin,
-        };
-        console.log("Login successful");
-        resolve(user);
-      } else {
-        console.warn("Login failed: Invalid credentials");
-        reject(new Error('Invalid username or password.'));
-      }
-    }, 500); // Simulate network delay
+  const response = await fetch('/api/auth', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
   });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Login failed.');
+  }
+
+  const user = await response.json();
+  console.log("Login successful");
+  return user;
 };
 
 /**
- * Changes the admin password and saves it to localStorage.
+ * Calls the backend API to change the admin password.
  * @param oldPassword The user's current password.
  * @param newPassword The desired new password.
  * @returns A promise that resolves on success.
  */
 export const changePassword = async (oldPassword: string, newPassword: string): Promise<void> => {
-    console.log("Attempting to change password.");
+    console.log("Attempting to change password via API.");
 
-    return new Promise((resolve, reject) => {
-        setTimeout(() => {
-            const storedPassword = getStoredPassword();
-            if (oldPassword !== storedPassword) {
-                console.warn("Password change failed: Incorrect old password.");
-                return reject(new Error("Your current password is not correct."));
-            }
-
-            if (!newPassword || newPassword.length < 4) {
-                 return reject(new Error("New password must be at least 4 characters long."));
-            }
-
-            try {
-                localStorage.setItem(PASSWORD_STORAGE_KEY, newPassword);
-                console.log("Password changed and saved to localStorage successfully.");
-                resolve();
-            } catch (error) {
-                console.error("Failed to save new password to localStorage", error);
-                reject(new Error("Could not save new password due to a storage error."));
-            }
-        }, 500);
+    const response = await fetch('/api/auth', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ oldPassword, newPassword }),
     });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to change password.');
+    }
+    
+    console.log("Password changed successfully.");
 };

@@ -24,14 +24,3 @@ export interface User {
   name: string;
   role: UserRole;
 }
-
-export enum SngineUserGroup {
-  Admin,
-  Anchor,
-}
-
-export interface SngineUser {
-  user_id: string;
-  user_name: string;
-  user_group: SngineUserGroup;
-}
