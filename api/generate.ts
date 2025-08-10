@@ -42,7 +42,7 @@ export default async function handler(req: Request) {
   }
   
   if (!process.env.API_KEY) {
-    return new Response(JSON.stringify({ error: 'API key is not configured on the server.' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: 'Gemini API key is not configured. Please set the API_KEY environment variable in your deployment settings.' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 
   try {
