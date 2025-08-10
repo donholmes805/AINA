@@ -1,0 +1,6 @@
+{
+  "name": "AI News Assistant",
+  "description": "An AI-powered assistant to generate up-to-date news articles, with sources and images, for any publication or website.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}
